@@ -5,9 +5,12 @@ require("dotenv").config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// IMPORTANT: middleware for form data
 app.use(express.urlencoded({ extended: false }));
 
-// DATABASE CONNECTION (AIVEN FIXED)
+// =====================
+// DATABASE CONNECTION
+// =====================
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -22,20 +25,23 @@ const db = mysql.createConnection({
 // CONNECT DB
 db.connect((err) => {
   if (err) {
-    console.log("❌ Database connection failed:", err.message);
+    console.log("❌ Database connection failed:");
+    console.log(err.message);
   } else {
     console.log("✅ Connected to MySQL Database");
   }
 });
 
-
+// =====================
 // HOME PAGE
+// =====================
 app.get("/", (req, res) => {
 
   db.query("SELECT * FROM students", (err, results) => {
 
     if (err) {
-      return res.send("Database Error");
+      console.log("QUERY ERROR:", err);
+      return res.send("Database Error: Check Render Logs");
     }
 
     let html = `
@@ -71,7 +77,6 @@ button { background:#1877f2; color:white; border:none; padding:10px 18px; border
 <input name="age" placeholder="Age" required>
 <button>Add Student</button>
 </form>
-
 </div>
 
 <div class="card">
@@ -99,31 +104,39 @@ Age: ${student.age}<br>
 `;
 
     res.send(html);
-
   });
-
 });
 
-
+// =====================
 // ADD STUDENT
+// =====================
 app.post("/add", (req, res) => {
   const { stud_name, stud_address, age } = req.body;
 
   db.query(
     "INSERT INTO students (stud_name, stud_address, age) VALUES (?, ?, ?)",
     [stud_name, stud_address, age],
-    () => res.redirect("/")
+    (err) => {
+      if (err) console.log(err);
+      res.redirect("/");
+    }
   );
 });
 
-
+// =====================
 // EDIT PAGE
+// =====================
 app.get("/edit/:id", (req, res) => {
 
   db.query(
     "SELECT * FROM students WHERE stud_id=?",
     [req.params.id],
     (err, results) => {
+
+      if (err) {
+        console.log(err);
+        return res.send("Database Error");
+      }
 
       const student = results[0];
 
@@ -151,30 +164,40 @@ app.get("/edit/:id", (req, res) => {
   );
 });
 
-
-// UPDATE
+// =====================
+// UPDATE STUDENT
+// =====================
 app.post("/update/:id", (req, res) => {
   const { stud_name, stud_address, age } = req.body;
 
   db.query(
     "UPDATE students SET stud_name=?, stud_address=?, age=? WHERE stud_id=?",
     [stud_name, stud_address, age, req.params.id],
-    () => res.redirect("/")
+    (err) => {
+      if (err) console.log(err);
+      res.redirect("/");
+    }
   );
 });
 
-
-// DELETE
+// =====================
+// DELETE STUDENT
+// =====================
 app.get("/delete/:id", (req, res) => {
+
   db.query(
     "DELETE FROM students WHERE stud_id=?",
     [req.params.id],
-    () => res.redirect("/")
+    (err) => {
+      if (err) console.log(err);
+      res.redirect("/");
+    }
   );
 });
 
-
-// START SERVER (RENDER FIX)
+// =====================
+// START SERVER
+// =====================
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
